@@ -62,7 +62,7 @@ pip install numpy matplotlib
 
 ### 2. Сгенерировать входные матрицы
 
-Скрипт создаст `matrix_a.txt` и `matrix_b.txt` (по умолчанию 300×300):
+Скрипт создаст `matrix_a.txt` и `matrix_b.txt` (по умолчанию 300×300, до 2000*2000):
 
 ```bash
 cd Lab1
