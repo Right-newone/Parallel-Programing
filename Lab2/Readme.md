@@ -233,6 +233,11 @@ py perf.py
 - `speedup_vs_threads.png` — зависимость ускорения от количества потоков с линией идеального ускорения.
 - `speedup_heatmap.png` — тепловая карта ускорения в зависимости от размера матрицы и количества потоков.
 
+Примерные графики, которые должны получиться в результате:
+<img width="1080" height="720" alt="time_vs_threads" src="https://github.com/user-attachments/assets/41b5783e-34a1-452f-9a22-cc0f5fa3cb24" />
+<img width="1080" height="720" alt="speedup_vs_threads" src="https://github.com/user-attachments/assets/84ac72db-46a4-4756-8921-abe0ed3e64a3" />
+<img width="1080" height="720" alt="speedup_heatmap" src="https://github.com/user-attachments/assets/c8fca315-0b01-4ba5-b396-4adc51f7f63c" />
+
 Графики позволяют сравнить производительность последовательного и параллельного алгоритмов, оценить влияние количества потоков и проследить зависимость ускорения от размера задачи.
 
 ## 📊 Ожидаемые результаты
