@@ -1,45 +1,105 @@
 from pathlib import Path
 import csv
+from collections import defaultdict
 import matplotlib.pyplot as plt
+
 
 def main():
     root = Path(__file__).resolve().parent
-    csv_file = root / "benchmark.csv"
+    csv_path = root / "benchmark.csv"
 
-    if not csv_file.exists():
-        print("benchmark.csv not found. Run the C++ program first.")
+    if not csv_path.exists():
+        print("benchmark.csv not found. Run the CUDA experiments first.")
         return 1
 
-    sizes, seq, par, speedup = [], [], [], []
-    with csv_file.open("r", encoding="utf-8") as f:
-        for row in csv.DictReader(f):
-            sizes.append(int(row["matrix_size"]))
-            seq.append(float(row["sequential_ms"]))
-            par.append(float(row["parallel_ms"]))
-            speedup.append(float(row["speedup"]))
+    rows = []
+    with csv_path.open("r", encoding="utf-8", newline="") as file:
+        for row in csv.DictReader(file):
+            rows.append({
+                "size": int(row["matrix_size"]),
+                "block_x": int(row["block_x"]),
+                "block_y": int(row["block_y"]),
+                "sequential": float(row["sequential_ms"]),
+                "kernel": float(row["cuda_kernel_ms"]),
+                "total": float(row["cuda_total_ms"]),
+                "speedup": float(row["speedup"]),
+            })
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    if not rows:
+        print("benchmark.csv contains no experiment rows.")
+        return 1
 
-    ax1.plot(sizes, seq, "o-", label="Sequential")
-    ax1.plot(sizes, par, "s-", label="Parallel")
-    ax1.set_xlabel("Matrix size N")
-    ax1.set_ylabel("Time (ms)")
-    ax1.set_title("Time vs N")
-    ax1.legend()
-    ax1.grid(True)
+    by_config = defaultdict(list)
+    sequential_by_size = {}
 
-    ax2.plot(sizes, speedup, "^-", color="green")
-    ax2.axhline(y=1, color="gray", linestyle="--")
-    ax2.set_xlabel("Matrix size N")
-    ax2.set_ylabel("Speedup")
-    ax2.set_title("Speedup vs N")
-    ax2.grid(True)
+    for row in rows:
+        config = (row["block_x"], row["block_y"])
+        by_config[config].append(row)
+        sequential_by_size[row["size"]] = row["sequential"]
 
-    plt.tight_layout()
-    out = root / "performance.png"
-    plt.savefig(out, dpi=120)
-    print(f"Saved: {out}")
+    sizes = sorted(sequential_by_size)
+    configurations = sorted(by_config)
+
+    figure, (time_axis, kernel_axis, speed_axis) = plt.subplots(
+        1, 3, figsize=(19, 5)
+    )
+
+    time_axis.plot(
+        sizes,
+        [sequential_by_size[size] for size in sizes],
+        marker="o",
+        label="Sequential CPU",
+    )
+
+    for config in configurations:
+        config_rows = sorted(by_config[config], key=lambda item: item["size"])
+        label = f"CUDA total {config[0]}x{config[1]}"
+        time_axis.plot(
+            [row["size"] for row in config_rows],
+            [row["total"] for row in config_rows],
+            marker="s",
+            label=label,
+        )
+
+        kernel_axis.plot(
+            [row["size"] for row in config_rows],
+            [row["kernel"] for row in config_rows],
+            marker="s",
+            label=f"{config[0]}x{config[1]}",
+        )
+
+        speed_axis.plot(
+            [row["size"] for row in config_rows],
+            [row["speedup"] for row in config_rows],
+            marker="^",
+            label=f"{config[0]}x{config[1]}",
+        )
+
+    time_axis.set_title("CPU time vs CUDA total time")
+    time_axis.set_xlabel("Matrix size N")
+    time_axis.set_ylabel("Time (ms)")
+    time_axis.grid(True)
+    time_axis.legend(fontsize=8)
+
+    kernel_axis.set_title("CUDA kernel execution time")
+    kernel_axis.set_xlabel("Matrix size N")
+    kernel_axis.set_ylabel("Time (ms)")
+    kernel_axis.grid(True)
+    kernel_axis.legend(fontsize=8)
+
+    speed_axis.axhline(y=1.0, linestyle="--")
+    speed_axis.set_title("Speedup using CUDA total time")
+    speed_axis.set_xlabel("Matrix size N")
+    speed_axis.set_ylabel("Speedup")
+    speed_axis.grid(True)
+    speed_axis.legend(fontsize=8)
+
+    figure.tight_layout()
+    output_path = root / "performance_cuda.png"
+    figure.savefig(output_path, dpi=140)
+    print(f"Saved: {output_path}")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

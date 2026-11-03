@@ -1,8 +1,9 @@
 export module matrix_ops;
+
 import std;
 import matrix_core_n_files;
 
-export Mat multiplySequential(const Mat &leftMatrix, const Mat &rightMatrix)
+export Mat multiplySequential(const Mat& leftMatrix, const Mat& rightMatrix)
 {
     const std::size_t size = leftMatrix.dimension();
 
@@ -33,8 +34,8 @@ export Mat multiplySequential(const Mat &leftMatrix, const Mat &rightMatrix)
 }
 
 export Mat multiplyParallel(
-    const Mat &leftMatrix,
-    const Mat &rightMatrix,
+    const Mat& leftMatrix,
+    const Mat& rightMatrix,
     std::size_t workerCount)
 {
     const std::size_t size = leftMatrix.dimension();
@@ -64,8 +65,7 @@ export Mat multiplyParallel(
          ++threadIndex)
     {
         const std::size_t rowBegin = threadIndex * blockSize;
-        const std::size_t rowEnd =
-            std::min(size, rowBegin + blockSize);
+        const std::size_t rowEnd = std::min(size, rowBegin + blockSize);
 
         if (rowBegin >= rowEnd)
         {
@@ -93,7 +93,7 @@ export Mat multiplyParallel(
             });
     }
 
-    for (auto &worker : workers)
+    for (auto& worker : workers)
     {
         worker.join();
     }

@@ -1,4 +1,5 @@
 export module matrix_core_n_files;
+
 import std;
 
 export class Mat
@@ -18,6 +19,11 @@ public:
             throw std::invalid_argument("Matrix dimension must be positive.");
         }
 
+        if (size > std::numeric_limits<std::size_t>::max() / size)
+        {
+            throw std::length_error("Matrix is too large.");
+        }
+
         _data.assign(size * size, 0.0);
     }
 
@@ -27,18 +33,30 @@ public:
         return _size;
     }
 
-    double &at(std::size_t row, std::size_t column) noexcept
+    double& at(std::size_t row, std::size_t column) noexcept
     {
         return _data[row * _size + column];
     }
 
-    const double &at(std::size_t row, std::size_t column) const noexcept
+    const double& at(std::size_t row, std::size_t column) const noexcept
     {
         return _data[row * _size + column];
+    }
+
+    [[nodiscard]]
+    double* data() noexcept
+    {
+        return _data.data();
+    }
+
+    [[nodiscard]]
+    const double* data() const noexcept
+    {
+        return _data.data();
     }
 };
 
-export Mat loadMat(const std::string &filePath)
+export Mat loadMat(const std::string& filePath)
 {
     std::ifstream file(filePath);
 
@@ -71,7 +89,7 @@ export Mat loadMat(const std::string &filePath)
     return matrix;
 }
 
-export void saveMat(const Mat &matrix, const std::string &filePath)
+export void saveMat(const Mat& matrix, const std::string& filePath)
 {
     std::ofstream file(filePath);
 
@@ -102,13 +120,36 @@ export void saveMat(const Mat &matrix, const std::string &filePath)
 }
 
 export void logBenchmark(
-    const std::string &filePath,
-    std::size_t size,
-    std::size_t threads,
+    const std::string& filePath,
+    std::size_t matrixSize,
+    int blockX,
+    int blockY,
+    int gridX,
+    int gridY,
     double sequentialTime,
-    double parallelTime)
+    double cudaKernelTime,
+    double cudaTotalTime)
 {
+    const std::string expectedHeader =
+        "matrix_size,block_x,block_y,grid_x,grid_y,"
+        "sequential_ms,cuda_kernel_ms,cuda_total_ms,speedup";
+
     const bool fileExists = std::filesystem::exists(filePath);
+    bool writeHeader = !fileExists || std::filesystem::file_size(filePath) == 0;
+
+    if (fileExists && !writeHeader)
+    {
+        std::ifstream existingFile(filePath);
+        std::string existingHeader;
+        std::getline(existingFile, existingHeader);
+
+        if (existingHeader != expectedHeader)
+        {
+            throw std::runtime_error(
+                "benchmark.csv has an old or unexpected format. "
+                "Delete it before starting a new CUDA experiment.");
+        }
+    }
 
     std::ofstream file(filePath, std::ios::app);
 
@@ -117,20 +158,22 @@ export void logBenchmark(
         throw std::runtime_error("Cannot open benchmark file: " + filePath);
     }
 
-    if (!fileExists)
+    if (writeHeader)
     {
-        file << "matrix_size,threads,sequential_ms,parallel_ms,speedup\n";
+        file << expectedHeader << '\n';
     }
 
-    const double acceleration =
-        (parallelTime > 0.0)
-            ? sequentialTime / parallelTime
-            : 0.0;
+    const double speedup =
+        cudaTotalTime > 0.0 ? sequentialTime / cudaTotalTime : 0.0;
 
-    file << size << ','
-         << threads << ','
+    file << matrixSize << ','
+         << blockX << ','
+         << blockY << ','
+         << gridX << ','
+         << gridY << ','
          << std::setprecision(10)
          << sequentialTime << ','
-         << parallelTime << ','
-         << acceleration << '\n';
+         << cudaKernelTime << ','
+         << cudaTotalTime << ','
+         << speedup << '\n';
 }

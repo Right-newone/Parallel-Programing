@@ -1,33 +1,54 @@
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $root
+Push-Location $root
 
-$sizes = 100, 200, 300, 400, 600, 800, 1000, 1200, 1600, 2000
+try {
+    $sizes = 200, 400, 800, 1200, 1600, 2000
+    $buildDirectory = Join-Path $root "build"
+    $preferredPaths = @(
+        (Join-Path $buildDirectory "LabCUDA.exe"),
+        (Join-Path $buildDirectory "Release\LabCUDA.exe")
+    )
 
-Remove-Item "benchmark.csv" -ErrorAction SilentlyContinue
+    $executablePath = $preferredPaths |
+        Where-Object { Test-Path $_ -PathType Leaf } |
+        Select-Object -First 1
 
-if (-not (Test-Path "Lab1.exe")) {
-    Write-Host "ERROR: Lab1.exe not found in $root" -ForegroundColor Red
-    exit 1
-}
+    if ($null -eq $executablePath) {
+        $executable = Get-ChildItem -Path $buildDirectory `
+            -Filter "LabCUDA.exe" -File -Recurse -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
 
-foreach ($n in $sizes) {
-    Write-Host "=== Running N = $n ===" -ForegroundColor Cyan
-
-    $content = Get-Content "gen.py" -Raw
-    $newContent = $content -replace '(?m)^SIZE\s*=\s*\d+', "SIZE = $n"
-    if ($content -eq $newContent) {
-        Write-Host "  WARNING: SIZE line not found or not changed" -ForegroundColor Yellow
+        if ($null -ne $executable) {
+            $executablePath = $executable.FullName
+        }
     }
-    Set-Content -Path "gen.py" -Value $newContent -NoNewline
 
-    Select-String -Path "gen.py" -Pattern "SIZE" | ForEach-Object { Write-Host "  $_" }
+    if ($null -eq $executablePath) {
+        throw "LabCUDA.exe not found. Configure and build the project first."
+    }
 
-    # Сгенерировать матрицы
-    py gen.py
-   
-    .\Lab1.exe
+    Remove-Item "benchmark.csv" -ErrorAction SilentlyContinue
+
+    foreach ($size in $sizes) {
+        Write-Host "`n===== Matrix size: $size x $size =====" -ForegroundColor Cyan
+
+        py .\gen.py --size $size
+        if ($LASTEXITCODE -ne 0) {
+            throw "Matrix generation failed for size $size."
+        }
+
+        & $executablePath
+        if ($LASTEXITCODE -ne 0) {
+            throw "CUDA experiment failed for size $size."
+        }
+    }
+
+    Write-Host "`nAll CUDA experiments completed." -ForegroundColor Green
+    Write-Host "Benchmark: $root\benchmark.csv"
 }
-
-Write-Host "Done. Check benchmark.csv" -ForegroundColor Green
+finally {
+    Pop-Location
+}
