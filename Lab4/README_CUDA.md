@@ -1,53 +1,42 @@
-# CUDA matrix multiplication laboratory
+# Лабораторная работа по умножению матриц на CUDA
 
-## Files
+## Файлы
 
-- `main.cpp` — CPU reference multiplication, CUDA configuration experiments, result checking and benchmark output.
-- `matrix_core_n_files.cppm` — matrix storage, input/output and CSV logging.
-- `matrix_ops.cppm` — unchanged CPU sequential and `std::thread` implementations from Lab1.
-- `matrix_cuda.hpp` — plain C interface between C++23 and CUDA translation units.
-- `matrix_cuda.cu` — CUDA kernel, device memory transfers and CUDA event timing.
-- `CMakeLists.txt` — C++23 modules plus CUDA C++20, targeting RTX 3080 (`sm_86`).
-- `gen.py` — creates two matrices of a requested size.
-- `check.py` — verifies `result.txt` with NumPy.
-- `perf.py` — plots CPU/CUDA time, kernel time and speedup.
-- `run_all.ps1` — experiments for sizes 200, 400, 800, 1200, 1600 and 2000.
+- `main.cpp` — эталонное умножение на CPU, эксперименты с конфигурациями CUDA, проверка результатов и вывод результатов бенчмарка.
+- `matrix_core_n_files.cppm` — хранение матриц, ввод/вывод и логирование в CSV.
+- `matrix_ops.cppm` — неизмененные последовательные реализации на CPU и реализации с `std::thread` из Lab1.
+- `matrix_cuda.hpp` — чистый C-интерфейс между единицами трансляции C++23 и CUDA.
+- `matrix_cuda.cu` — ядро CUDA, передача памяти на устройство и замер времени событий CUDA.
+- `CMakeLists.txt` — модули C++23 плюс CUDA C++20, ориентированные на RTX 3080 (`sm_86`).
+- `gen.py` — создает две матрицы заданного размера.
+- `check.py` — проверяет `result.txt` с помощью NumPy.
+- `perf.py` — строит графики времени CPU/CUDA, времени работы ядра и ускорения.
+- `run_all.ps1` — эксперименты для размеров 200, 400, 800, 1200, 1600 и 2000.
 
-## Build
+## Сборка
 
-Run these commands from this folder in **Developer PowerShell for Visual Studio 2026**:
+Выполните эти команды из этой папки в **Developer PowerShell for Visual Studio 2026**:
 
 ```powershell
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
-
-If Ninja is not installed, use the Visual Studio generator instead:
-
-```powershell
+Если Ninja не установлен, используйте вместо него генератор Visual Studio:
+```
 cmake -S . -B build -G "Visual Studio 18 2026" -A x64
 cmake --build build --config Release
 ```
-
-## One test
-
-```powershell
+Один тест
+```
 py .\gen.py --size 200
 .\build\LabCUDA.exe
 py .\check.py
 ```
+Для генератора Visual Studio исполняемый файл обычно находится в build\Release\LabCUDA.exe.
 
-For the Visual Studio generator, the executable is normally under `build\Release\LabCUDA.exe`.
-
-## All experiments
-
-After building, run:
-
-```powershell
+# Все эксперименты
+После сборки запустите:
+```
 .\run_all.ps1
 py .\perf.py
 ```
-
-The program tests four block shapes: 8x8, 16x16, 32x8 and 32x32. Each configuration is warmed up and then measured three times. `cuda_kernel_ms` records CUDA-event time for the kernel alone. `cuda_total_ms` records host elapsed time for allocation, host-to-device copies, kernel execution and device-to-host copy; context initialization is performed before measurements. The reported speedup uses the total CUDA time.
-
-`result.txt` contains the result from the configuration with the lowest measured total CUDA time. `benchmark.csv` contains one row per matrix size and block configuration.
