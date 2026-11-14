@@ -45,7 +45,7 @@
 | 2000 | 4 | 2201.239 | 2.60 | 0.65 | 0.000e+00 | OK |
 | 2000 | 8 | 1806.726 | 3.16 | 0.40 | 0.000e+00 | OK |
 
-![Графики эксперимента](performance.png)
+![Графики эксперимента](<img width="1950" height="825" alt="performance" src="https://github.com/user-attachments/assets/72cffcd9-88e1-49fe-a8ea-0d11f19dec39" />)
 <!-- BENCHMARK_RESULTS_END -->
 
 ## 4. Анализ результатов
